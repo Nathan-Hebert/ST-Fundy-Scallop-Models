@@ -202,7 +202,8 @@ plot_predictions <- function(pred_df, landmass, x_var = "x", y_var = "y",
 # estimated, which the function will use to create discontinuities in the plot
 plot_index <- function(df, year_col, est_col, lwr_ci_col, upr_ci_col, 
                        years_NA = 2020, text_size = 16, xlabel = "Year", ylabel, 
-                       y_lowerlim = 0, est_color = "black", ci_color = "grey", 
+                       y_lowerlim = 0, y_upperlim = NA, 
+                       est_color = "black", ci_color = "grey", 
                        line_size = 1, point_size = 2)
 {
   # Insert missing year NAs so proper discontinuities will appear in plot
@@ -224,7 +225,7 @@ plot_index <- function(df, year_col, est_col, lwr_ci_col, upr_ci_col,
     geom_line(lwd = line_size, colour = est_color) +
     geom_point(size = point_size, colour = est_color) +
     labs(x = xlabel, y = ylabel) + theme_classic() +
-    scale_y_continuous(limits = c(y_lowerlim, NA), expand = c(0,0)) +
+    scale_y_continuous(limits = c(y_lowerlim, y_upperlim), expand = c(0,0)) +
     theme(text = element_text(size = text_size),
           axis.text = element_text(size = text_size)) +
     scale_x_continuous(breaks = seq(min(df[year_col]), max(df[year_col]),

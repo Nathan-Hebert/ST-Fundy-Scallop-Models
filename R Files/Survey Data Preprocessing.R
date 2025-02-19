@@ -180,9 +180,9 @@ mwsh_df$Benthoscape <- ifelse(mwsh_df$Benthoscape == 7, 6, mwsh_df$Benthoscape)
 benthoscape_labels <- c("Gravelly sand", "Mixed sediment", 
                         "Sand", "Silt", "Tidal scoured mixed sediments")
 shf_df$Benthoscape <- factor(shf_df$Benthoscape, levels = c(2:3, 5, 6, 8),
-                            benthoscape_labels)
+                            benthoscape_labels) %>% relevel(ref = "Mixed sediment")
 mwsh_df$Benthoscape <- factor(mwsh_df$Benthoscape, levels = c(2:3, 5, 6, 8),
-                              benthoscape_labels)
+                              benthoscape_labels) %>% relevel(ref = "Mixed sediment")
 
 ############Simulated Individual Shell Height Measurements Dataset##############
 

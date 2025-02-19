@@ -113,8 +113,8 @@ ggsave(paste0(getwd(),"/Figs/abundance_residuals.jpeg"), plot=last_plot(),
 covar_names <- c("Benthoscape", "BathymetryScaled", 
                  "BackscatterScaled", "LogShearVelocityScaled", 
                  "SedMobFreqScaled", "LogBottomTempAtSurveyScaled")
-covar_plot_labels <- c("Benthoscape", "Depth (m)", "Backscatter (intensity)", 
-                       "Shear velocity (m/s)", "SMF (log scale time percent)", 
+covar_plot_labels <- c("Benthoscape", "Depth (m)", "Backscatter (relative intensity)", 
+                       "Shear velocity (m/s)", "SMF (time percent)", 
                        "Bottom temperature (°C)")
 plot_effects(abundance_fit, covar_names,
              xlab = covar_plot_labels,
@@ -472,7 +472,7 @@ ggsave(paste0(getwd(),"/Figs/SH_RFs.jpeg"), plot=last_plot(),
 # Plot the shell height index
 plot_index(df = index_SH, year_col = "year", est_col = "est", lwr_ci_col = "lwr", 
            upr_ci_col = "upr", ylabel = "Mean predicted shell\nheight (if 80 mm+)", 
-           y_lowerlim = 105)
+           y_lowerlim = 100)
 ggsave(paste0(getwd(),"/Figs/SH_index.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
 
@@ -519,7 +519,7 @@ ggsave(paste0(getwd(),"/Figs/MWSH_RFs.jpeg"), plot=last_plot(),
 # Plot the meat weight index (based on 100 mm scallop)
 plot_index(df = index_MWSH, year_col = "year", est_col = "est", lwr_ci_col = "lwr", 
            upr_ci_col = "upr", ylabel = "Mean predicted meat weight\nof 100 mm scallop (g)", 
-           y_lowerlim = 9)
+           y_lowerlim = 5)
 ggsave(paste0(getwd(),"/Figs/MWSH_index.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
 
@@ -587,37 +587,4 @@ ggplot(data = biomass_abundance_indices, aes(x = est.abundance, y = est.biomass,
   xlab("Total predicted 80 mm+ abundance (millions)") + theme_classic() +
   theme(text = element_text(size = text_size))
 ggsave(paste0(getwd(),"/Figs/abundance_biomass_scatterplot.jpeg"), plot=last_plot(), 
-       width=index_width, height=index_height, units="in")
-
-######Comparing Biomass Model To Model Currently Used For Stock Assessment######
-
-# Load output from the stock assessment model currently in use (separate output 
-# for each management area)
-Spa1A <- read.csv("Data/Spa1AModelOutput.csv")
-Spa1B <- read.csv("Data/Spa1BModelOutput.csv")
-Spa4 <- read.csv("Data/Spa4ModelOutput.csv")
-
-# Combine the management areas into one dataframe
-DF <- bind_rows(Spa1A %>% mutate(Dataset = 'Spa1A'),
-                Spa1B %>% mutate(Dataset = 'Spa1B'),
-                Spa4 %>% mutate(Dataset = 'Spa4'))
-
-# Combine the biomass model index with an index calculated from the stock assessment
-# output
-plot_data <- data.frame(biomass = DF$X50.[grep("B", DF$X)], 
-                        year = c(1997:2023, 1997:2023, 1983:2023)) %>%
-  group_by(year) %>% filter(year>2010) %>% summarize(est = sum(biomass)) %>%
-  bind_rows(index_biomass[c("year","est")]) %>% 
-  mutate(model = c(rep("Current stock\nassessment\nmodel", 13), rep("Biomass\nmodel", 12))) %>%
-  bind_rows(data.frame(year = 2020, est = NA, model = "Biomass\nmodel"))
-
-# Plot the indices together
-ggplot(plot_data, aes(x = year, y = est, col = model)) +
-  geom_point(size = 2) + geom_line(lwd = 1) +
-  scale_y_continuous(limits = c(0, 16600), expand = c(0, 0)) +
-  scale_x_continuous(breaks = seq(2011, 2023, by = 2)) +
-  theme_classic() + theme(text = element_text(size = text_size),
-                          legend.text = element_text(margin = margin(b = 10))) +
-  labs(y = "Total predicted 80 mm+ biomass (metric tonnes)", x = "Year", col = "")
-ggsave(paste0(getwd(),"/Figs/biomass_SAM_indices_compare.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
