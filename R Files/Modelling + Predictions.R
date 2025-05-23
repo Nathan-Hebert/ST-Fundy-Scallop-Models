@@ -83,6 +83,17 @@ ggsave(paste0(getwd(),"/Figs/mesh.jpeg"), plot=last_plot(),
 
 ###########Abundance Model###########
 
+# Plots the number of tows by sampling date (year + day of year)
+ggplot(data = shf_df, aes(x = doy)) + geom_histogram(bins = 10) + facet_wrap(~year) + 
+  xlab("Day of year") + ylab("Number of tows") + theme_classic() + 
+  theme(text = element_text(size = 16), 
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        axis.line.y = element_blank()) + 
+  coord_cartesian(xlim = c(150, 250), ylim = c(0, 150), expand = F) + 
+  scale_x_continuous(breaks = c(160,200,240))
+ggsave(paste0(getwd(),"/Figs/tows_yearly.jpeg"), plot=last_plot(), 
+       width=6.5, height=4.5, units="in")
+
 # Fit the abundance model... linear term for temperature to avoid smooth too 
 # sensitive to high temp. values
 abundance_fit <- sdmTMB(
@@ -118,7 +129,7 @@ covar_plot_labels <- c("Benthoscape", "Depth (m)", "Backscatter (relative intens
                        "Bottom temperature (°C)")
 plot_effects(abundance_fit, covar_names,
              xlab = covar_plot_labels,
-             ylim = lapply(vector("list", length = 6), function(x) c(-11,250)), 
+             ylim = lapply(vector("list", length = 6), function(x) c(-11,300)), 
              ylab = expression("Predicted 80 mm+ density (thousands/km"^2*")"), 
              nrow = 2, ncol = 3, no_ylab = c(2,3,5,6), yr = 2023)
 ggsave(paste0(getwd(),"/Figs/abundance_enviro_effects.jpeg"), plot=last_plot(), 
@@ -126,14 +137,14 @@ ggsave(paste0(getwd(),"/Figs/abundance_enviro_effects.jpeg"), plot=last_plot(),
 
 ############Shell Height Model###########
 
-# Fit the shell height model... linear terms used to replace smooths with an sd 
+# Fit the shell height model... linear term used to replace smooth with an sd 
 # estimate = 0 in an initial fit
 SH_fit <- sdmTMB(
   HEIGHT ~ 0 + f_year + 
     Benthoscape + 
     s(BathymetryScaled, k = 3) +
-    BackscatterScaled +
-    s(SedMobFreqScaled, k = 3) + 
+    s(BackscatterScaled, k = 3) +
+    SedMobFreqScaled + 
     s(LogShearVelocityScaled, k = 3) + 
     s(LogBottomTempAtSurveyScaled, k = 3),
   family = Gamma(link = "log"), 
@@ -155,7 +166,7 @@ ggsave(paste0(getwd(),"/Figs/SH_residuals.jpeg"), plot=last_plot(),
 # Plot conditional environmental effects from the shell height model
 plot_effects(SH_fit, covar_names,
              xlab = covar_plot_labels,
-             ylim = lapply(vector("list", length = 6), function(x) c(90,142)), 
+             ylim = lapply(vector("list", length = 6), function(x) c(90,144)), 
              ylab = "Predicted shell height (if 80 mm+)", nrow = 2, ncol = 3,
              no_ylab = c(2,3,5,6), yr = 2023)
 ggsave(paste0(getwd(),"/Figs/SH_enviro_effects.jpeg"), plot=last_plot(), 
@@ -163,7 +174,64 @@ ggsave(paste0(getwd(),"/Figs/SH_enviro_effects.jpeg"), plot=last_plot(),
 
 ############Meat Weight Model###########
 
-# Fit the meat weight model... linear terms used to replace smooths with an sd 
+# Plots the number of MWSH samples by sampling date (year + day of year)
+ggplot(data = mwsh_df, aes(x = doy)) + geom_histogram(bins = 10) + facet_wrap(~year) + 
+  xlab("Day of year") + ylab("Number of joint MWSH samples") + theme_classic() + 
+  theme(text = element_text(size = 16), 
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        axis.line.y = element_blank()) + 
+  coord_cartesian(xlim = c(150, 250), ylim = c(0, 2400), expand = F) + 
+  scale_x_continuous(breaks = c(160,200,240))
+ggsave(paste0(getwd(),"/Figs/detailed_samples_yearly.jpeg"), plot=last_plot(), 
+       width=6.5, height=4.5, units="in")
+
+# Plots the raw LWR data for 2022-2023, with a loess smooth for each year
+ggplot(data = mwsh_df[mwsh_df$year > 2021,], 
+       aes(x = HEIGHT, y = WET_MEAT_WGT, col = as.factor(year))) + 
+  geom_point(alpha = 0.2) + 
+  geom_smooth(aes(group = as.factor(year)), method = "loess", 
+              col = "black", size = 1.2, se = F) + 
+  xlab("Shell height (mm)") + ylab("Meat weight (g)") + 
+  theme_classic() + 
+  theme(text = element_text(size = 16)) + labs(col = "Year") + 
+  guides(col = guide_legend(override.aes = list(alpha = 1))) + 
+  coord_cartesian(xlim = c(80, 190), ylim = c(0,100), expand = F) + 
+  scale_x_continuous(breaks = c(80, 120, 160))
+ggsave(paste0(getwd(),"/Figs/MWSH_2022_2023_data.jpeg"), plot=last_plot(), 
+       width=6.5, height=4.5, units="in")
+
+# Plots the raw LWR data for all years, with a loess smooth for each year
+ggplot(data = mwsh_df, aes(x = HEIGHT, y = WET_MEAT_WGT)) + 
+  geom_point(alpha = 0.3) + facet_wrap(~year) + 
+  geom_smooth(method = "loess", size = 1.2, se = F) + 
+  xlab("Shell height (mm)") + ylab("Meat weight (g)") + 
+  theme_classic() +
+  theme(text = element_text(size = 16),
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        axis.line.y = element_blank()) +
+  coord_cartesian(xlim = c(80, 190), ylim = c(0, 100), expand = F) + 
+  scale_x_continuous(breaks = c(80, 120, 160))
+ggsave(paste0(getwd(),"/Figs/MWSH_yearly_data.jpeg"), plot=last_plot(), 
+       width=6.5, height=4.5, units="in")
+
+# Plots the raw LWR data for all years, with a loess smooth for each year-month
+# combination
+ggplot(data = mwsh_df, aes(x = HEIGHT, y = WET_MEAT_WGT, col = as.factor(month))) + 
+  geom_point(alpha = 0.025, size = 1) + facet_wrap(~year) + 
+  geom_smooth(method = "loess", size = 1.2, se = F) + 
+  xlab("Shell height (mm)") + ylab("Meat weight (g)") + 
+  theme_classic() + labs(colour = "Month") +
+  theme(text = element_text(size = 16),
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        panel.background = element_rect(fill = "darkgrey"),
+        axis.line.y = element_blank()) +
+  coord_cartesian(xlim = c(80, 190), ylim = c(0, 100), expand = F) + 
+  scale_x_continuous(breaks = c(80, 120, 160)) + 
+  scale_colour_viridis_d(lab = c("June","July","August"))
+ggsave(paste0(getwd(),"/Figs/MWSH_yearly_data_month.jpeg"), plot=last_plot(), 
+       width=7, height=5, units="in")
+
+# Fit the meat weight model... linear term used to replace smooth with an sd 
 # estimate = 0 in an initial fit
 MWSH_fit <- sdmTMB(
   WET_MEAT_WGT ~ 0 + f_year + 
@@ -172,7 +240,7 @@ MWSH_fit <- sdmTMB(
     s(BackscatterScaled, k = 3) +
     SedMobFreqScaled + 
     s(LogShearVelocityScaled, k = 3) + 
-    LogBottomTempAtSurveyScaled + 
+    s(LogBottomTempAtSurveyScaled, k = 3) + 
     s(LogHEIGHTScaled, by = f_year, k = 3),
   family = Gamma(link = "log"), 
   data = mwsh_df_nonsf, 
@@ -212,26 +280,26 @@ prediction <- predict(MWSH_fit, pred_dat, re_form = NA, se_fit = TRUE)
 # Generate plot of yearly conditional effect
 prediction$HEIGHT <- exp(prediction$LogHEIGHTScaled*sd(sh_df$LogHEIGHT)+
                            mean(sh_df$LogHEIGHT))
-cols <- rep(scales::hue_pal()(6), each = 2); shp_size <- 4
+cols <- rep(scales::hue_pal()(6), each = 2); shp_size <- 3.5
 ggplot(prediction, aes(HEIGHT, exp(est),
                        ymin = exp(est - 1.96 * est_se),
                        ymax = exp(est + 1.96 * est_se),
                        col = f_year, fill = f_year, shape = f_year)) +
-  geom_ribbon(aes(alpha = ifelse(f_year == "2023", 0.18, 0.09)), 
-              col = NA, show.legend = F) + 
-  geom_point(data = prediction[c(169:180, 385:396, 553:564),], size = shp_size) + 
-  geom_line(aes(alpha = ifelse(f_year == "2023", 1, 0.5)), 
-            lwd = 1.2, show.legend = F) +
+  geom_ribbon(col = NA, show.legend = F, alpha = 0.1
+  ) + geom_line(aes(linetype = f_year), 
+                lwd = 1.2) + 
+  geom_point(data = prediction[c(169:180, 385:396, 553:564),], size = shp_size)  +
   scale_alpha_identity() +
-  coord_cartesian(expand = FALSE, ylim = c(0,NA), xlim = c(80,170)) + 
+  coord_cartesian(expand = FALSE, ylim = c(0,70), xlim = c(80,170)) + 
   theme_classic() + scale_x_continuous(breaks = c(80, 110, 140, 170)) +
-  theme(text = element_text(size = 16)) +
+  theme(text = element_text(size = 16), legend.key.size = unit(2,"line")) +
   labs(x = "Shell height (mm)", y = "Predicted meat weight (g)",
-       col = "Year", shape = "Year", fill = "Year") +  
+       col = "Year", shape = "Year", fill = "Year", linetype = "Year") +  
   scale_color_manual(values = cols) + 
   scale_fill_manual(values = cols) +
-  scale_shape_manual(values = rep(c(16,17), 6)) + 
-  guides(shape = guide_legend(override.aes = list(size = shp_size)))
+  scale_shape_manual(values = rep(c(15,16,17), 4)) + 
+  guides(shape = guide_legend(override.aes = list(size = shp_size))) + 
+  scale_linetype_manual(values = rep(c("solid","dotted"), each = 6))
 ggsave(paste0(getwd(),"/Figs/MWSH_SH_effect.jpeg"), plot=last_plot(), 
        width=6.5, height=6, units="in")
 
@@ -244,7 +312,7 @@ MWSH_fit_nospatial <- sdmTMB(
     BackscatterScaled +
     s(SedMobFreqScaled, k = 3) + 
     s(LogShearVelocityScaled, k = 3) + 
-    LogBottomTempAtSurveyScaled + 
+    s(LogBottomTempAtSurveyScaled, k = 3) + 
     s(LogHEIGHTScaled, by = f_year, k = 3),
   family = Gamma(link = "log"), 
   data = mwsh_df_nonsf, 
@@ -286,7 +354,7 @@ for(i in 1:nrow(shf_df_nonsf))
     ((800*5.334)/(1000*1000)))/0.36 # 1 standardized tow = 800m*5.334m, q = 0.36
 }
 
-# Fit the biomass model... linear terms used to replace smooths with an sd 
+# Fit the biomass model... linear term used to replace smooth with an sd 
 # estimate = 0 in an initial fit
 biomass_fit <- sdmTMB(
   wt_tow ~ 0 + f_year + 
@@ -315,7 +383,7 @@ ggsave(paste0(getwd(),"/Figs/biomass_residuals.jpeg"), plot=last_plot(),
 # Plot conditional environmental effects from the biomass model
 plot_effects(biomass_fit, covar_names,
              xlab = covar_plot_labels,
-             ylim = lapply(vector("list", length = 6), function(x) c(-152,7222)), 
+             ylim = lapply(vector("list", length = 6), function(x) c(-152,7500)), 
              ylab = expression("Predicted 80 mm+ biomass density (kg/km"^2*")"), 
              nrow = 2, ncol = 3, no_ylab = c(2,3,5,6), yr = 2023)
 ggsave(paste0(getwd(),"/Figs/biomass_enviro_effects.jpeg"), plot=last_plot(), 
@@ -351,24 +419,53 @@ raster_df[paste0(covariates,"Scaled")] <-
 # Calculate the area of each cell for biomass and abundance indices
 index_area <- (raster_df$y[2]-raster_df$y[1])^2
 
-# To aid interpretation of the predictions, plot the data locations over the study 
-# area (SHF data is in orange and MWSH data is in blue... MWSH locations are a 
-# subset of the SHF locations)
+# Plots all tows over the study area (SHF data is in purple and MWSH data is in 
+# yellow... MWSH locations are a subset of the SHF locations)
 raster_df$dummy <- 1 # Fake variable just to plot the study area
 plot_predictions(raster_df, land, fill_var = "dummy", 
                  facet_vars = "year", xlimits = xlimits,
-                 ylimits = ylimits, plot_title = "Tow locations", 
+                 ylimits = ylimits, plot_title = "Tows by data available", 
                  legend.pos = "none", font_size = text_size,
-                 facet_ncol = 3) + 
-  geom_point(data = shf_df, aes(x = x, y = y), col = "orange", size = 0.7) + 
-  geom_point(data = mwsh_df, aes(x = x, y = y), col = "blue", size = 0.7)
+                 facet_ncol = 4) + 
+  geom_point(data = shf_df, aes(x = x, y = y), col = "#440154FF", size = 0.7) + 
+  geom_point(data = mwsh_df, aes(x = x, y = y), col = "#FDE725FF", size = 0.7) +
+  scale_fill_gradient(low = "darkgrey", high = "darkgrey") + guides(fill = "none")
 ggsave(paste0(getwd(),"/Figs/study_area_data_ts.jpeg"), plot=last_plot(), 
        width=map_width, height=map_height, units="in")
 
-# Spatially plot summer bottom temps. by year to aid interpretation of predictions
+# Plots all tows over the study area, color-coded by month
+plot_predictions(raster_df, land, fill_var = "dummy", 
+                 facet_vars = "year", xlimits = xlimits,
+                 ylimits = ylimits, plot_title = "Tows by sampling month", 
+                 legend.pos = "bottom", font_size = text_size,
+                 facet_ncol = 4) + 
+  geom_point(data = shf_df, aes(x = x, y = y, col = as.factor(month)), 
+             size = 0.7) + scale_color_viridis_d(lab = c("June","July","August")) + 
+  scale_fill_gradient(low = "darkgrey", high = "darkgrey") + 
+  guides(fill = "none", color = guide_legend(override.aes = list(size = 6))) + 
+  labs(colour = "Month") + theme(legend.key = element_rect(fill = "darkgrey"))
+ggsave(paste0(getwd(),"/Figs/study_area_months_shf.jpeg"), plot=last_plot(), 
+       width=map_width, height=map_height, units="in")
+
+# Plots the locations of MWSH samples over the study area, color-coded by month
+plot_predictions(raster_df, land, fill_var = "dummy", 
+                 facet_vars = "year", xlimits = xlimits,
+                 ylimits = ylimits, 
+                 plot_title = "Tows with joint meat weight-shell height data, by sampling month", 
+                 legend.pos = "bottom", font_size = text_size,
+                 facet_ncol = 4) + 
+  geom_point(data = mwsh_df, aes(x = x, y = y, col = as.factor(month)), 
+             size = 0.7) + scale_color_viridis_d(lab = c("June","July","August")) + 
+  scale_fill_gradient(low = "darkgrey", high = "darkgrey") + 
+  guides(fill = "none", color = guide_legend(override.aes = list(size = 6))) + 
+  labs(colour = "Month") + theme(legend.key = element_rect(fill = "darkgrey"))
+ggsave(paste0(getwd(),"/Figs/study_area_months_mwsh.jpeg"), plot=last_plot(), 
+       width=map_width, height=map_height, units="in")
+
+# Spatially plots summer bottom temps. by year to aid interpretation of predictions
 plot_predictions(raster_df, land, fill_var = "BottomTempAtSurvey", 
                  facet_vars = "year", xlimits = xlimits,
-                 ylimits = ylimits, plot_title = "Average summer bottom temperature (°C)", 
+                 ylimits = ylimits, plot_title = "Mean June-August bottom temperature (°C)", 
                  font_size = text_size)
 ggsave(paste0(getwd(),"/Figs/temp_timeseries.jpeg"), plot=last_plot(), 
        width=map_width, height=map_height, units = "in")
@@ -378,9 +475,11 @@ ggsave(paste0(getwd(),"/Figs/temp_timeseries.jpeg"), plot=last_plot(),
 correlation <- round(cor(shf_df$nums_tow, shf_df$BIN_ID_100, method = "spearman"),2)
 ggplot(data = shf_df, aes(x = sqrt(nums_tow*0.36*1000/(5.334*800)), y = sqrt(BIN_ID_100))) + 
   geom_point(size = 0.75, alpha = 0.75) +
+  theme_classic() + 
   xlab("Square root of 80 mm+ abundance per tow") + 
   ylab("Square root of 100-104 mm abundance per tow") + 
-  theme(text = element_text(size = text_size)) 
+  theme(text = element_text(size = text_size)) +
+  coord_cartesian(xlim = c(0,NA), ylim = c(0,NA), expand = F)
 ggsave(paste0(getwd(),"/Figs/corr_abundance_100_104.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
 
@@ -521,6 +620,40 @@ plot_index(df = index_MWSH, year_col = "year", est_col = "est", lwr_ci_col = "lw
            upr_ci_col = "upr", ylabel = "Mean predicted meat weight\nof 100 mm scallop (g)", 
            y_lowerlim = 5)
 ggsave(paste0(getwd(),"/Figs/MWSH_index.jpeg"), plot=last_plot(), 
+       width=index_width, height=index_height, units="in")
+
+# Expand the meat weight index to include a row with NAs for 2020
+index_MWSH_expand <- rbind(index_MWSH,index_MWSH[1,])
+index_MWSH_expand[nrow(index_MWSH_expand), "year"] <- 2020
+index_MWSH_expand[nrow(index_MWSH_expand), "est"] <- NA
+index_MWSH_expand <- index_MWSH_expand %>% arrange(year)
+
+# Calculate a time series of mean meat weight at 100mm using the raw data,
+# and then expands to include a row with NAs for 2020
+mwsh_df_ts <- mwsh_df[c("year","HEIGHT","WET_MEAT_WGT")] %>% 
+  filter(HEIGHT == 100) %>% group_by(year) %>% 
+  summarize(mean = mean(WET_MEAT_WGT))
+mwsh_df_ts_expand <- mwsh_df_ts
+mwsh_df_ts_expand[nrow(mwsh_df_ts_expand), "year"] <- 2020
+mwsh_df_ts_expand[nrow(mwsh_df_ts_expand), "mean"] <- NA
+mwsh_df_ts_expand <- mwsh_df_ts_expand %>% arrange(year)
+
+# ACF plots for the (modelled) meat weight index with and without 2023
+plot_acf_ggplot(index_MWSH_expand$est, 
+                title = "Meat weight index\nw/ 2023") +
+  plot_acf_ggplot(index_MWSH_expand$est[-nrow(index_MWSH_expand)], 
+                  title = "Meat weight index\nw/o 2023") +
+  plot_layout(axes = "collect")
+ggsave(paste0(getwd(),"/Figs/ACF_model_index.jpeg"), plot=last_plot(), 
+       width=index_width, height=index_height, units="in")
+
+# ACF plots for the 100 mm meat weight data with and without 2023
+plot_acf_ggplot(mwsh_df_ts_expand$mean, 
+                title = "Mean observed meat\nweight for 100 mm\nscallop w/ 2023") +
+  plot_acf_ggplot(mwsh_df_ts_expand$mean[-nrow(mwsh_df_ts_expand)], 
+                  title = "Mean observed meat\nweight for 100 mm\nscallop w/o 2023") +
+  plot_layout(axes = "collect")
+ggsave(paste0(getwd(),"/Figs/ACF_data_index.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
 
 ###########Biomass Model###########

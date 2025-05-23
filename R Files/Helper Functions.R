@@ -231,3 +231,22 @@ plot_index <- function(df, year_col, est_col, lwr_ci_col, upr_ci_col,
     scale_x_continuous(breaks = seq(min(df[year_col]), max(df[year_col]),
                                     by = floor((max(df[year_col])-1-min(df[year_col]))/4)))
 }
+
+# Plots an ACF function in ggplot for a time series of data
+plot_acf_ggplot <- function(ts_data, font_size = 16, title = "", lags = 3) {
+  # Calculate ACF without plotting... pass NAs so result is valid
+  acf_result <- acf(ts_data, plot = FALSE, na.action = na.pass)
+  
+  # Create dataframe of lags and ACF values
+  acf_df <- with(acf_result, data.frame(lag = lag, acf = acf))
+  print(acf_df)
+  
+  # Plot using ggplot2 (no confidence bounds)
+  ggplot(acf_df, aes(x = lag, y = acf)) +
+    geom_bar(stat = "identity", width = 0.1, fill = "steelblue") +
+    geom_hline(yintercept = 0, color = "black") +
+    labs(title = "ACF Plot", x = "Lag (years)", y = "Autocorrelation") + 
+    scale_x_continuous(breaks = c(0:lags), limits = c(-0.1,lags+0.1)) +
+    scale_y_continuous(limits = c(-1,1)) +
+    theme(text = element_text(size = font_size)) + ggtitle(title)
+}
