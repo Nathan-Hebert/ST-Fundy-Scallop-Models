@@ -95,16 +95,16 @@ pred_dat$est <- predictions$fit
 pred_dat$est_se <- predictions$se.fit
 # Generate plot of yearly conditional effect
 pred_dat$HEIGHT <- exp(pred_dat$LogHEIGHTScaled*sd(sh_df$LogHEIGHT)+
-                           mean(sh_df$LogHEIGHT))
-cols <- rep(scales::hue_pal()(6), each = 2); shp_size <- 3.5
+                         mean(sh_df$LogHEIGHT))
+cols <- rep(c("#DDBB00","#005BBB","black","firebrick2"), each = 3); shp_size <- 3.5
 ggplot(pred_dat, aes(HEIGHT, exp(est),
-                       ymin = exp(est - 1.96 * est_se),
-                       ymax = exp(est + 1.96 * est_se),
-                       col = f_year, fill = f_year, shape = f_year)) +
-  geom_ribbon(col = NA, show.legend = F, alpha = 0.1
-  ) + geom_line(aes(linetype = f_year), 
-                lwd = 1.2) + 
-  geom_point(data = pred_dat[c(169:180, 385:396, 553:564),], size = shp_size)  +
+                     ymin = exp(est - 1.96 * est_se),
+                     ymax = exp(est + 1.96 * est_se),
+                     col = f_year, fill = f_year, shape = f_year)) +
+  geom_ribbon(col = NA, show.legend = F, alpha = 0.1) + 
+  geom_line(aes(linetype = f_year), lwd = 1.3, alpha = 0.85) + 
+  geom_point(data = pred_dat[c(169:180, 385:396, 553:564),], size = shp_size, 
+             stroke = 1.5, alpha = 0.85)  +
   scale_alpha_identity() +
   coord_cartesian(expand = FALSE, ylim = c(0,75), xlim = c(80,170)) + 
   theme_classic() + scale_x_continuous(breaks = c(80, 110, 140, 170)) +
@@ -113,8 +113,8 @@ ggplot(pred_dat, aes(HEIGHT, exp(est),
        col = "Year", shape = "Year", fill = "Year", linetype = "Year") +  
   scale_color_manual(values = cols) + 
   scale_fill_manual(values = cols) +
-  scale_shape_manual(values = rep(c(15,16,17), 4)) + 
+  scale_shape_manual(values = rep(c(15,16,17,5), 3)) + 
   guides(shape = guide_legend(override.aes = list(size = shp_size))) + 
-  scale_linetype_manual(values = rep(c("solid","dotted"), each = 6))
+  scale_linetype_manual(values = rep(c("solid","dotted","dashed"), each = 4))
 ggsave(paste0(getwd(),"/Figs/MWSH_SH_effect_supplement.jpeg"), plot=last_plot(), 
        width=6.5, height=6, units="in")

@@ -278,17 +278,15 @@ pred_dat <- expand.grid(year = c(2011:2019, 2021:2023),
 pred_dat$f_year <- as.factor(pred_dat$year)
 prediction <- predict(MWSH_fit, pred_dat, re_form = NA, se_fit = TRUE)
 # Generate plot of yearly conditional effect
-prediction$HEIGHT <- exp(prediction$LogHEIGHTScaled*sd(sh_df$LogHEIGHT)+
-                           mean(sh_df$LogHEIGHT))
-cols <- rep(scales::hue_pal()(6), each = 2); shp_size <- 3.5
+cols <- rep(c("#DDBB00","#005BBB","black","firebrick2"), each = 3); shp_size <- 3.5
 ggplot(prediction, aes(HEIGHT, exp(est),
                        ymin = exp(est - 1.96 * est_se),
                        ymax = exp(est + 1.96 * est_se),
                        col = f_year, fill = f_year, shape = f_year)) +
-  geom_ribbon(col = NA, show.legend = F, alpha = 0.1
-  ) + geom_line(aes(linetype = f_year), 
-                lwd = 1.2) + 
-  geom_point(data = prediction[c(169:180, 385:396, 553:564),], size = shp_size)  +
+  geom_ribbon(col = NA, show.legend = F, alpha = 0.1) + 
+  geom_line(aes(linetype = f_year), lwd = 1.3, alpha = 0.85) + 
+  geom_point(data = prediction[c(169:180, 385:396, 553:564),], size = shp_size, 
+             stroke = 1.5, alpha = 0.85)  +
   scale_alpha_identity() +
   coord_cartesian(expand = FALSE, ylim = c(0,70), xlim = c(80,170)) + 
   theme_classic() + scale_x_continuous(breaks = c(80, 110, 140, 170)) +
@@ -297,9 +295,9 @@ ggplot(prediction, aes(HEIGHT, exp(est),
        col = "Year", shape = "Year", fill = "Year", linetype = "Year") +  
   scale_color_manual(values = cols) + 
   scale_fill_manual(values = cols) +
-  scale_shape_manual(values = rep(c(15,16,17), 4)) + 
+  scale_shape_manual(values = rep(c(15,16,17,5), 3)) + 
   guides(shape = guide_legend(override.aes = list(size = shp_size))) + 
-  scale_linetype_manual(values = rep(c("solid","dotted"), each = 6))
+  scale_linetype_manual(values = rep(c("solid","dotted","dashed"), each = 4))
 ggsave(paste0(getwd(),"/Figs/MWSH_SH_effect.jpeg"), plot=last_plot(), 
        width=6.5, height=6, units="in")
 
@@ -396,7 +394,8 @@ xlimits <- c(220, 420); ylimits <- c(4910, 5050) # Limits for map axes
 text_size <- 16 # For all figures below
 map_width <- 10; map_height <- 8 # Dimensions of saved map figures
 index_width <- 7; index_height <- 6 # Dimensions of saved index figures 
-                                    # (including scatterplots)
+                                    # (including scatterplots but excluding the 
+                                    # plot comparing design-based and model indices)
 nsims <- 500 # How many times to sample from joint precision matrices for SE maps
 
 # Load in the processed raster data and then convert the UTM coordinates from m 
@@ -721,3 +720,47 @@ ggplot(data = biomass_abundance_indices, aes(x = est.abundance, y = est.biomass,
   theme(text = element_text(size = text_size))
 ggsave(paste0(getwd(),"/Figs/abundance_biomass_scatterplot.jpeg"), plot=last_plot(), 
        width=index_width, height=index_height, units="in")
+
+###########Compare Design-Based Indices to Our Model Indices###########
+
+# Load in the design-based indices, and plot them alongside our model indices in 
+# a panel figure (with both biomass and abundance)
+index_dat <- read.csv("Data/SPA1A1B4_Combined_StratifiedIndexScaledToArea_final.csv") %>%
+  filter(YearSurvey > 2010 & YearSurvey != 2020)
+compare_plot_df <- data.frame(year = c(index_abundance$year, index_dat$YearSurvey, 
+                                       rep(2020,2)),
+                              source = c(rep("Spatio-temporal model", 12), 
+                                         rep("Design-based", 12),
+                                         "Spatio-temporal model",
+                                         "Design-based"),
+                              est_abundance = c(index_abundance$est, 
+                                               (index_dat$Abundance/0.36)/10^6,
+                                               NA, NA),
+                              est_biomass = c(index_biomass$est, 
+                                            index_dat$Biomass_mt/0.36,
+                                            NA, NA)) %>% arrange(year)
+abundance_compare <- ggplot(data = compare_plot_df, 
+                            aes(x = year, y = est_abundance, col = source)) + 
+  geom_path(size = 1.5) + geom_point(size = 2) +
+  coord_cartesian(xlim = c(2010.95, 2024), ylim = c(0, 800), expand = F) + 
+  theme_classic() +
+  scale_x_continuous(breaks = seq(2011,2023.5, by = 2)) + 
+  xlab("Year") + ylab("Estimated total abundance (millions)") +
+  theme(text = element_text(size = 16), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.title.x = element_blank()) + 
+  labs(col = "Index")
+biomass_compare <- ggplot(data = compare_plot_df, 
+                          aes(x = year, y = est_biomass, col = source)) + 
+  geom_path(size = 1.5) + geom_point(size = 2) +
+  coord_cartesian(xlim = c(2010.95, 2023.5), ylim = c(0, 17000), expand = F) + 
+  theme_classic() +
+  scale_x_continuous(breaks = seq(2011,2024, by = 2)) + 
+  xlab("Year") + ylab("Estimated total biomass (metric tonnes)") +
+  theme(text = element_text(size = 16)) + labs(col = "Index")
+abundance_compare + biomass_compare + plot_layout(ncol = 1, guides = "collect") &
+  theme(legend.position = "bottom", 
+        legend.title = element_text(margin = margin(r = 10)),
+        legend.text = element_text(margin = margin(r = 10),
+                                   size = 16))
+ggsave(paste0(getwd(),"/Figs/indices_compare.jpeg"), plot=last_plot(), 
+       width=7, height=10, units="in")
