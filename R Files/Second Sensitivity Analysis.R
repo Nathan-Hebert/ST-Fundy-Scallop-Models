@@ -108,7 +108,7 @@ ggplot(pred_dat, aes(HEIGHT, exp(est),
   scale_alpha_identity() +
   coord_cartesian(expand = FALSE, ylim = c(0,75), xlim = c(80,170)) + 
   theme_classic() + scale_x_continuous(breaks = c(80, 110, 140, 170)) +
-  theme(text = element_text(size = 16), legend.key.size = unit(2,"line")) +
+  theme(text = element_text(size = 16), legend.key.size = unit(2.1,"line")) +
   labs(x = "Shell height (mm)", y = "Predicted meat weight (g)",
        col = "Year", shape = "Year", fill = "Year", linetype = "Year") +  
   scale_color_manual(values = cols) + 

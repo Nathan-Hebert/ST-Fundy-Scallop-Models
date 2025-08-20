@@ -16,6 +16,7 @@ library(ggplot2)
 library(viridis)
 library(patchwork)
 library(scales)
+library(emmeans)
 source("Helper Functions.R")
 
 ######################Model-Fitting + Covariate Effects#########################
@@ -113,7 +114,8 @@ abundance_fit <- sdmTMB(
   control = sdmTMBcontrol(newton_loops = 2)
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(abundance_fit)
-table_fit(abundance_fit) # Summary and CIs (minus smoothers)
+
+emmeans(abundance_fit, ~ Benthoscape) %>% pairs(infer = TRUE, type = "response")
 
 # Plot randomized quantile residuals from the abundance model
 qq_residual_plot(abundance_fit)
@@ -156,7 +158,6 @@ SH_fit <- sdmTMB(
   control = sdmTMBcontrol(newton_loops = 2)
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(SH_fit)
-table_fit(SH_fit) # Summary and CIs (minus smoothers)
 
 # Plot randomized quantile residuals from the shell height model
 qq_residual_plot(SH_fit)
@@ -251,7 +252,6 @@ MWSH_fit <- sdmTMB(
   control = sdmTMBcontrol(newton_loops = 2)
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(MWSH_fit)
-table_fit(MWSH_fit) # Summary and CIs (minus smoothers)
 
 # Plot randomized quantile residuals from the meat weight model
 qq_residual_plot(MWSH_fit)
@@ -278,6 +278,8 @@ pred_dat <- expand.grid(year = c(2011:2019, 2021:2023),
 pred_dat$f_year <- as.factor(pred_dat$year)
 prediction <- predict(MWSH_fit, pred_dat, re_form = NA, se_fit = TRUE)
 # Generate plot of yearly conditional effect
+prediction$HEIGHT <- exp(prediction$LogHEIGHTScaled*sd(sh_df$LogHEIGHT)+
+                           mean(sh_df$LogHEIGHT))
 cols <- rep(c("#DDBB00","#005BBB","black","firebrick2"), each = 3); shp_size <- 3.5
 ggplot(prediction, aes(HEIGHT, exp(est),
                        ymin = exp(est - 1.96 * est_se),
@@ -290,7 +292,7 @@ ggplot(prediction, aes(HEIGHT, exp(est),
   scale_alpha_identity() +
   coord_cartesian(expand = FALSE, ylim = c(0,70), xlim = c(80,170)) + 
   theme_classic() + scale_x_continuous(breaks = c(80, 110, 140, 170)) +
-  theme(text = element_text(size = 16), legend.key.size = unit(2,"line")) +
+  theme(text = element_text(size = 16), legend.key.size = unit(2.1,"line")) +
   labs(x = "Shell height (mm)", y = "Predicted meat weight (g)",
        col = "Year", shape = "Year", fill = "Year", linetype = "Year") +  
   scale_color_manual(values = cols) + 
@@ -318,7 +320,6 @@ MWSH_fit_nospatial <- sdmTMB(
   control = sdmTMBcontrol(newton_loops = 2)
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(MWSH_fit_nospatial)
-table_fit(MWSH_fit_nospatial) # Summary and CIs (minus smoothers)
 
 #... and plot conditional environmental effects
 plot_effects(MWSH_fit_nospatial, covar_names,
@@ -371,7 +372,6 @@ biomass_fit <- sdmTMB(
   control = sdmTMBcontrol(newton_loops = 2)
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(biomass_fit)
-table_fit(biomass_fit) # Summary and CIs (minus smoothers)
 
 # Plot randomized quantile residuals from the biomass model
 qq_residual_plot(biomass_fit)
@@ -764,3 +764,60 @@ abundance_compare + biomass_compare + plot_layout(ncol = 1, guides = "collect") 
                                    size = 16))
 ggsave(paste0(getwd(),"/Figs/indices_compare.jpeg"), plot=last_plot(), 
        width=7, height=10, units="in")
+
+#####################Benthoscape Contrasts (Differences)########################
+
+# Set up plot labels, including abbreviations for benthoscape levels
+models <- list("Mod1" = SH_fit, "Mod2" = MWSH_fit, "Mod3" = abundance_fit, 
+               "Mod4" = biomass_fit)
+map_levels <- c("Gravelly sand" = "Gr", "Mixed sediment" = "Mi", "Sand" = "Sa",
+                "Silt" = "Si", "Tidal scoured mixed sediments" = "Ti")
+model_titles <- c("Mod1" = "a) Shell height (if 80 mm+)",
+                  "Mod2" = "b) Meat weight of 100 mm scallop",
+                  "Mod3" = "c) 80 mm+ density",
+                  "Mod4" = "d) 80 mm+ biomass density")
+
+# Go through each model and generate a plot of benthoscape contrasts (differences)
+# ... use log-scale and highlight significant differences
+plots <- lapply(names(models), function(model_name) {
+  
+  # Get contrasts for a model
+  mod <- models[[model_name]]
+  emm <- emmeans(mod, ~ Benthoscape)
+  pairs_df <- pairs(emm, infer = TRUE) %>% as.data.frame() %>%
+    mutate(model = model_name,
+           signif = ifelse(p.value > 0.05,"Yes","No")) %>%
+    separate(contrast, into = c("level1", "level2"), sep = " - ") %>%
+    mutate(
+      abbrev1 = map_levels[level1],
+      abbrev2 = map_levels[level2],
+      contrast_label = paste0(abbrev1, "-", abbrev2)) %>%
+    mutate(contrast_label = factor(contrast_label, levels = unique(contrast_label)))
+  
+  # Generate plot
+  ggplot(pairs_df, aes(x = contrast_label, y = estimate,
+                       ymin = lower.CL, ymax = upper.CL, col = signif)) +
+    geom_pointrange(size = 1.25, lwd = 1.25) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    coord_flip() +
+    theme_classic() +
+    labs(col = "95% CI contains 0",
+         title = model_titles[model_name],
+         y = "Log-scale contrast",
+         x = "") +
+    theme(text = element_text(size = 16),
+          plot.title.position = "plot",
+          plot.title = element_text(hjust = 0),
+          legend.text = element_text(size = 16,
+          margin = margin(l = 5, r = 5, unit = "pt")), 
+          legend.title = element_text(margin = margin(r = 10)))
+})
+
+# Combine plots above using patchwork
+(plots[[1]] + plots[[2]]) /
+  plot_spacer() /
+  (plots[[3]] + plots[[4]]) +
+  plot_layout(guides = "collect", heights = c(1, 0.05, 1)) &
+  theme(legend.position = "bottom")
+ggsave(paste0(getwd(),"/Figs/benthoscape_contrasts.jpeg"), plot=last_plot(), 
+       width=10.5, height=7, units="in")
