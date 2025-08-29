@@ -35,17 +35,6 @@ qq_residual_plot <- function(model, font_size = 16, ref_line_col = "red",
     theme(text = element_text(size = font_size))
 }
 
-# For a given sdmTMB model fit, creates a table of parameter estimates and std. 
-# errors, plus CIs... ignores smoothers
-table_fit <- function(fit, rounding = 3, conf_level = 0.95) {
-  fixed <- tidy(fit, "fixed", conf.int = T, conf.level = conf_level)[-1]
-  ran_pars <- tidy(fit, "ran_pars", conf.int = T, conf.level = conf_level)[-1]
-  parameters <- c(tidy(fit, "fixed")$term, tidy(fit, "ran_pars")$term)
-  result <- data.frame(parameter = parameters, 
-                       rbind(round(fixed, rounding), round(ran_pars, rounding)))
-  return(result)
-}
-
 # Generates environmental covariate conditional effects plots with 95% confidence 
 # bounds for a model fit... fit is the model object, xvars is a vector containing 
 # the names of covariates to plot effects for, xlabs is a vector of labels 

@@ -115,8 +115,6 @@ abundance_fit <- sdmTMB(
 ) %>% run_extra_optimization(newton_loops = 2)
 sanity(abundance_fit)
 
-emmeans(abundance_fit, ~ Benthoscape) %>% pairs(infer = TRUE, type = "response")
-
 # Plot randomized quantile residuals from the abundance model
 qq_residual_plot(abundance_fit)
 ggsave(paste0(getwd(),"/Figs/abundance_residuals.jpeg"), plot=last_plot(), 
@@ -333,7 +331,7 @@ ggsave(paste0(getwd(),"/Figs/MWSH_enviro_effects_sensitivity.jpeg"), plot=last_p
 ###########Biomass Model###########
 
 # Determine mid-points of the SHF bins
-commercial_bins <- names(shf_df_nonsf[grep("BIN", names(shf_df_nonsf))[-c(1:16)]])
+commercial_bins <- names(shf_df_nonsf[grep("BIN", names(shf_df_nonsf))])
 bin_midpoints <- as.numeric(substr(commercial_bins, 8,11)) + (4.99/2)
 
 # Use meat weight model to predict meat weight in kg for each mid-point+tow combination
@@ -464,7 +462,7 @@ ggsave(paste0(getwd(),"/Figs/study_area_months_mwsh.jpeg"), plot=last_plot(),
 # Spatially plots summer bottom temps. by year to aid interpretation of predictions
 plot_predictions(raster_df, land, fill_var = "BottomTempAtSurvey", 
                  facet_vars = "year", xlimits = xlimits,
-                 ylimits = ylimits, plot_title = "Mean June-August bottom temperature (°C)", 
+                 ylimits = ylimits, plot_title = "June-August mean bottom temperature (°C)", 
                  font_size = text_size)
 ggsave(paste0(getwd(),"/Figs/temp_timeseries.jpeg"), plot=last_plot(), 
        width=map_width, height=map_height, units = "in")

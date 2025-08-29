@@ -12,6 +12,9 @@ library(mapview)
 library(raster)
 library(lubridate)
 
+# Set seed
+set.seed(123)
+
 ##################################Survey Data###################################
 
 # Notes: 
@@ -23,50 +26,25 @@ library(lubridate)
 # height data. 
 # *** Only a subset of scallops in a tow is sampled for the meat weight-shell 
 # height data within a sampled tow.
-# ***If one wanted to get commercial size (fishery-targeted size), one would use 
-# shf.dat bins from BIN_ID_80 and up; i.e. sum fields BIN_ID_80... up to BIN_ID_195.
-
-# Set seed
-set.seed(123)
-
-# Read in the SPA shapefiles for SPAs 1A, 1B, and 4
-temp <- tempfile()
-download.file(paste0("https://raw.githubusercontent.com/Mar-scal/GIS_layers/mast",
-                     "er/inshore_boundaries/inshore_boundaries.zip"), temp)
-temp2 <- tempfile()
-unzip(zipfile=temp, exdir=temp2)
-SPA1A <- st_read(paste0(temp2, "/SPA1A_polygon_NAD83.shp")) %>% 
-  mutate(SPA = "SPA 1A") %>% dplyr::select(SPA)
-SPA1B <- st_read(paste0(temp2, "/SPA1B_polygon_NAD83.shp")) %>% 
-  mutate(SPA = "SPA 1B") %>% dplyr::select(SPA)
-SPA4 <- st_read(paste0(temp2, "/SPA4_polygon_NAD83.shp"))  %>% 
-  mutate(SPA = "SPA 4") %>% dplyr::select(SPA)
-
-# Combine the SPA shapefiles into a single UTM Zone 20N object
-SPA1ABand4 <- rbind(SPA1A, SPA1B, SPA4) %>% st_transform(crs = 4326)
 
 ####SHF Data####
 
-# Load in dataset with abundance by 5mm shell height frequency bin 
-shf.dat <- read.csv('Data/bof.shf.unlined.gear.2011to2023.JunetoAug.csv')
+# Load in dataset with commercial size abundance by 5mm shell height frequency bin 
+shf.dat <- read.csv('Data/bof.commercial.shf.unlined.gear.2011to2023.JunetoAug.csv')
 str(shf.dat)
 dim(shf.dat)
 
-# Convert to an sf object, and then crop to SPAs 1A, 1B, and 4... data comes in 
-# as WGS 84 
-shf.dat.sf <-  st_as_sf(shf.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>%
-  st_intersection(st_make_valid(SPA1ABand4))
-mapview(shf.dat.sf)
-
-# Convert cropped sf object to WGS 84 UTM zone 20N
-shf.dat.sf.utm <- st_transform(shf.dat.sf, crs = 32620)
+# Convert to an sf object in WGS 84 UTM zone 20N
+shf.dat.sf.utm <-  st_as_sf(shf.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>%
+  st_transform(crs = 32620)
 shf.dat.sf.utm[c("x","y")] <- st_coordinates(shf.dat.sf.utm$geometry)
 st_crs(shf.dat.sf.utm)
+mapview(shf.dat.sf.utm)
 
 # Calculate commercial numbers in thousands per km^2 by summing the commercial bins,
 # applying the q correction, and converting units
 commercial_bins <- names(shf.dat.sf.utm)[grep("BIN", 
-                                              names(shf.dat.sf.utm))[-c(1:16)]]
+                                              names(shf.dat.sf.utm))]
 shf.dat.sf.utm$nums_tow <- (rowSums(shf.dat.sf.utm[,commercial_bins, drop = T])/
   ((800*5.334)/(1000)))/(0.36) # 1 standardized tow = 800m*5.334m, q = 0.36
 
@@ -78,24 +56,19 @@ shf.dat.sf.utm$doy <- lubridate::yday(make_date(year = shf.dat.sf.utm$year,
 
 ####MWSH Data####
 
-# Load in meat weight-shell height (MWSH) sampling data and subset to commercial 
+# Load in meat weight-shell height (MWSH) sampling data for commercial 
 # size scallops... the data is normalized by individual scallop sample within a 
 # tow within a cruise 
-mwsh.dat <- read.csv("Data/BFdetail.dat.2011to2023.JunetoMidAug.clean.csv") %>%
-  filter(HEIGHT >= 80)
+mwsh.dat <- read.csv("Data/BFdetail.dat.2011to2023.JunetoMidAug.commercial.csv")
 str(mwsh.dat)
 dim(mwsh.dat)
 
-# Convert to an sf object, and then crop to SPAs 1A, 1B, and 4... data comes in 
-# as WGS 84 
-mwsh.dat.sf <- st_as_sf(mwsh.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>%
-  st_intersection(st_make_valid(SPA1ABand4))
-mapview(mwsh.dat.sf)
-
-# Convert cropped sf object to WGS 84 UTM zone 20N
-mwsh.dat.sf.utm <- st_transform(mwsh.dat.sf, crs = 32620)
+# Convert to an sf object in WGS 84 UTM zone 20N
+mwsh.dat.sf.utm <- st_as_sf(mwsh.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>% 
+  st_transform(crs = 32620)
 mwsh.dat.sf.utm[c("x","y")] <- st_coordinates(mwsh.dat.sf.utm$geometry)
 st_crs(mwsh.dat.sf.utm)
+mapview(mwsh.dat.sf.utm)
 
 # Make year factor variable and day of year variable
 mwsh.dat.sf.utm$f_year <- as.factor(mwsh.dat.sf.utm$year)
