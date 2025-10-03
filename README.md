@@ -1,5 +1,5 @@
 # ST-Fundy-Scallop-Models
-Code used in Hebert et al., submitted to the ICES Journal of Marine Science.
+Code used in Hebert et al. 2025, "Interannual variability in the length–weight relationship can disrupt the abundance–biomass correlation of sea scallop (<i>Placopecten magellanicus</i>)". ICES Journal of Marine Science.
 
 Recommended order to run the `.R` files:
 - `Survey Data Preprocessing.R`
