@@ -30,9 +30,19 @@ set.seed(123)
 ####SHF Data####
 
 # Load in dataset with commercial size abundance by 5mm shell height frequency bin 
-shf.dat <- read.csv('Data/bof.commercial.shf.unlined.gear.2011to2023.JunetoAug.csv')
+shf.dat <- read.csv('Data/BoF.SeaScallop.CommercialSize.Abundances.2011to2023.csv')
 str(shf.dat)
 dim(shf.dat)
+
+# Rename some columns to address changes made to headers
+shf.dat <- shf.dat %>% 
+  rename("CRUISE.x" = CRUISE) %>% 
+  rename("TOW_NO.x" = TOW_NO) %>% 
+  rename("mid.lon" = MID_LON) %>% 
+  rename("mid.lat" = MID_LAT) %>% 
+  rename("year" = YEAR) %>% 
+  rename("month" = MONTH) %>%
+  rename("day" = DAY)
 
 # Convert to an sf object in WGS 84 UTM zone 20N
 shf.dat.sf.utm <-  st_as_sf(shf.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>%
@@ -59,9 +69,17 @@ shf.dat.sf.utm$doy <- lubridate::yday(make_date(year = shf.dat.sf.utm$year,
 # Load in meat weight-shell height (MWSH) sampling data for commercial 
 # size scallops... the data is normalized by individual scallop sample within a 
 # tow within a cruise 
-mwsh.dat <- read.csv("Data/BFdetail.dat.2011to2023.JunetoMidAug.commercial.csv")
+mwsh.dat <- read.csv("Data/BoF.SeaScallop.CommercialSize.MeatWeightShellHeightData.2011to2023.csv")
 str(mwsh.dat)
 dim(mwsh.dat)
+
+# Rename some columns to address changes made to headers
+mwsh.dat <- mwsh.dat %>% 
+  rename("mid.lon" = MID_LON) %>% 
+  rename("mid.lat" = MID_LAT) %>% 
+  rename("year" = YEAR) %>% 
+  rename("month" = MONTH) %>%
+  rename("day" = DAY)
 
 # Convert to an sf object in WGS 84 UTM zone 20N
 mwsh.dat.sf.utm <- st_as_sf(mwsh.dat, coords= c("mid.lon","mid.lat"),  crs = 4326) %>% 
@@ -224,4 +242,5 @@ head(sh_df)
 
 # Write processed MWSH, SHF, and SH data to rds file
 data_list <- list(mwsh_df, shf_df, sh_df)
+
 saveRDS(data_list, paste(getwd(),"/Data/Processed_MWSH_SH_Data.rds", sep = ""))
